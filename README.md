@@ -3,7 +3,7 @@
 我在寻找如何开始使用[FFmpeg](https://www.ffmpeg.org/)库(即libav)相关的教程或书籍时看到了 ["How to write a video player in less than 1k lines"](http://dranger.com/ffmpeg/) 教程。
 非常不幸的是，它已经过时了，于是我决定写这篇文章。
 
-这里的大多数代码是用C写的，**但别担心**: 你可以简单方便地理解并应用到你常用的语言中去。
+这里的大多数代码是用C写的，**莫慌**: 你可以很容易理解并方便地应用到你常用的语言中去。
 FFmpeg libav 有许多其他语言版本，如： [python](https://mikeboers.github.io/PyAV/), [go](https://github.com/imkira/go-libav) 即使没有你使用的语言，你仍然可以通过`ffi` (here's an example with [Lua](https://github.com/daurnimator/ffmpeg-lua-ffi/blob/master/init.lua))来支持。
 
 我们一开始将对视频、音频、编码器、容器等概念做一个快速的概览，然后快速地过一下如何使用 `FFmpeg` 命令行，最后开始写代码。也可以直接跳到[ ](http://newmediarockstars.com/wp-content/uploads/2015/11/nintendo-direct-iwata.jpg)[Learn FFmpeg libav the Hard Way.](#learn-ffmpeg-libav-the-hard-way)
@@ -44,43 +44,42 @@ Zeitgenössische Illustration (1886)
 
 ## audio - what you listen!
 
-Although a muted video can express a variety of feelings, adding sound to it brings more pleasure to the experience.
+尽管一个复合的视频可以传递大量的感觉，但加入音频可以带来更多的愉悦体验。
 
-Sound is the vibration that propagates as a wave of pressure, through the air or any other transmission medium, such as a gas, liquid or solid.
+声音是通过空气或其他媒介（如气体、液体或固体）传播的类似压力波的震动。
 
-> In a digital audio system, a microphone converts sound to an analog electrical signal, then an analog-to-digital converter (ADC)—typically using [pulse-code modulation—converts (PCM)](https://en.wikipedia.org/wiki/Pulse-code_modulation) the analog signal into a digital signal.
+> 在数字音频系统中，麦克风将声音转换为模拟电子信号，然后利用模数转换（ADC）——常用 [pulse-code modulation—converts (PCM)](https://en.wikipedia.org/wiki/Pulse-code_modulation) 将模拟信号转换为数字信号。
 
 ![audio analog to digital](https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/CPT-Sound-ADC-DAC.svg/640px-CPT-Sound-ADC-DAC.svg.png "audio analog to digital")
 >[Source](https://commons.wikimedia.org/wiki/File:CPT-Sound-ADC-DAC.svg)
 
 ## codec - shrinking data
 
-> CODEC is an electronic circuit or software that **compresses or decompresses digital audio/video.** It converts raw (uncompressed) digital audio/video to a compressed format or vice versa.
+> CODEC 是一种电子电路或者软件可以**压缩或解压数字音频及视频.** 它将原始（未压缩）的数字音频/视频转换为压缩的格式或其他副本。
 > https://en.wikipedia.org/wiki/Video_codec
 
-But if we chose to pack millions of images in a single file and called it a movie, we might end up with a huge file. Let's do the math:
+如果我们要打包成百上千万张图片到一个单一的文件（即所谓的电影）中我们可能最终会得到一个超级大的文件。我们来做个计算：
 
-Suppose we are creating a video with a resolution of `1080 x 1920` (height x width) and that we'll spend `3 bytes` per pixel (the minimal point at a screen) to encode the color (or [24 bit color](https://en.wikipedia.org/wiki/Color_depth#True_color_.2824-bit.29), what gives us 16,777,216 different colors) and this video runs at `24 frames per second` and it is `30 minutes` long.
+假设我们要创建一个分辨率为`1080 x 1920` (高 x 宽)视频，每个像素（屏幕上最小的点）用`3 字节`来编码颜色(或[24位真彩色](https://en.wikipedia.org/wiki/Color_depth#True_color_.2824-bit.29), 它可以编码16,777,216种不同颜色)，帧率为`24 帧每秒`，总长 `30分钟`。 
 
 ```c
-toppf = 1080 * 1920 //total_of_pixels_per_frame
-cpp = 3 //cost_per_pixel
-tis = 30 * 60 //time_in_seconds
-fps = 24 //frames_per_second
-
-required_storage = tis * fps * toppf * cpp
+toppf = 1080 * 1920 //每一帧的总像素
+cpp = 3 //编码每个像素需要的字节数
+tis = 30 * 60 //总秒数
+fps = 24 //每秒的帧数
+需要存储空间 = tis * fps * toppf * cpp
 ```
 
-This video would require approximately `250.28GB` of storage or `1.11Gbps` of bandwidth! That's why we need to use a [CODEC](https://github.com/leandromoreira/digital_video_introduction#how-does-a-video-codec-work).
+这个视频大约需要`250.28GB`存储空间或`1.11Gbps`的带宽！这就是为什么我们需要 [CODEC](https://github.com/leandromoreira/digital_video_introduction#how-does-a-video-codec-work).
 
 ## container - a comfy place for audio and video
 
-> A container or wrapper format is a metafile format whose specification describes how different elements of data and metadata coexist in a computer file.
+> 容器或封装格式是一种定义了描述不同的元素或数据与数据标签如何共存于一个计算机文件的元文件数据格式。
 > https://en.wikipedia.org/wiki/Digital_container_format
 
-A **single file that contains all the streams** (mostly the audio and video) and it also provides **synchronization and general metadata**, such as title, resolution and etc.
+一个 **单一文件包含了所有数据流** （绝大多数是音频和视频流）同时还有**同步和一般数据元**，比如标题、分辨率等。
 
-Usually we can infer the format of a file by looking at its extension: for instance a `video.webm` is probably a video using the container [`webm`](https://www.webmproject.org/).
+通常我们通过文件扩展名来猜测一个文件的格式，如：`video.webm`可能是使用[`webm`](https://www.webmproject.org/)容器的视频。
 
 ![container](/img/container.png)
 
