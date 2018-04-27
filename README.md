@@ -85,66 +85,64 @@ fps = 24 //每秒的帧数
 
 # FFmpeg - command line
 
-> A complete, cross-platform solution to record, convert and stream audio and video.
+> 一个完整的、交叉平台音视频流记录、转换解决方案。
 
-To work with multimedia we can use the AMAZING tool/library called [FFmpeg](https://www.ffmpeg.org/). Chances are you already know/use it directly or indirectly (do you use [Chrome?](https://www.chromium.org/developers/design-documents/video)).
+我们可以利用神一样的[FFmpeg](https://www.ffmpeg.org/)工具库来制作多媒体。或许你已经知道或使用并直接或间接的在使用了。(有用 [Chrome？](https://www.chromium.org/developers/design-documents/video)).
 
-It has a command line program called `ffmpeg`, a very simple yet powerful binary.
-For instance, you can convert from `mp4` to the container `avi` just by typing the follow command:
+它有一个简单但非常强大的命令行程序叫做`ffmpeg`。来看个例子，将`mp4`转换为`avi`只要在命令行输入：
 
 ```bash
 $ ffmpeg -i input.mp4 output.avi
 ```
 
-We just made a **remuxing** here, which is converting from one container to another one.
-Technically FFmpeg could also be doing a transcoding but we'll talk about that later.
+我们在这里只要做**remuxing**，将一种容器转换为另一种。我们后面还会讲到另一种操作：转码。
 
 ## FFmpeg command line tool 101
 
-FFmpeg does have a [documentation](https://www.ffmpeg.org/ffmpeg.html) that does a great job of explaining how it works.
+FFmpeg的文档[documentation](https://www.ffmpeg.org/ffmpeg.html)做得非常好，解释了它如何工作。
 
-To make things short, the FFmpeg command line program expects the following argument format to perform its actions `ffmpeg {1} {2} -i {3} {4} {5}`, where:
+我们简化一下FFmpeg的命令行程序的参数格式形如：`ffmpeg {1} {2} -i {3} {4} {5}`，这里：
 
-1. global options
-2. input file options
-3. input url
-4. output file options
-5. output url
+1. 全局选项
+2. 输入文件选项
+3. 输入文件
+4. 输出文件选项
+5. 输出文件
 
-The parts 2, 3, 4 and 5 can be as many as you need.
-It's easier to understand this argument format in action:
+第2, 3, 4 和 5 可以要多少有多少。
+我们用个简单的例子来理解一下：
 
 ``` bash
 # WARNING: this file is around 300MB
 $ wget -O bunny_1080p_60fps.mp4 http://distribution.bbb3d.renderfarming.net/video/mp4/bbb_sunflower_1080p_60fps_normal.mp4
 
 $ ffmpeg \
--y \ # global options
--c:a libfdk_aac -c:v libx264 \ # input options
--i bunny_1080p_60fps.mp4 \ # input url
--c:v libvpx-vp9 -c:a libvorbis \ # output options
-bunny_1080p_60fps_vp9.webm # output url
+-y \ # 全局选项
+-c:a libfdk_aac -c:v libx264 \ # 输入选项
+-i bunny_1080p_60fps.mp4 \ # 输入文件
+-c:v libvpx-vp9 -c:a libvorbis \ # 输出选项
+bunny_1080p_60fps_vp9.webm # 输出文件
 ```
-This command takes an input file `mp4` containing two streams (an audio encoded with `aac` CODEC and a video encoded using `h264` CODEC) and convert it to `webm`, changing its audio and video CODECs too.
+这个命令有一个输入文件`mp4`含有两个流(音频流采用`aac`编码、视频流采用`h264`编码) 并将其转换为`webm`，同时改变了音视频编码器。
 
-We could simplify the command above but then be aware that FFmpeg will adopt or guess the default values for you.
-For instance when you just type `ffmpeg -i input.avi output.mp4` what audio/video CODEC does it use to produce the `output.mp4`?
+我们下面将简化这个命令，要注意到FFmpeg会匹配或猜测一个默认值。例如输入`ffmpeg -i input.avi output.mp4`，用什么音视频编码来产生`output.mp4`呢？
 
-Werner Robitza wrote a must read/execute [tutorial about encoding and editing with FFmpeg](http://slhck.info/ffmpeg-encoding-course/#/).
+Werner Robitza 写过一篇教程[tutorial about encoding and editing with FFmpeg](http://slhck.info/ffmpeg-encoding-course/#/)，非常值得一读。
 
 # Common video operations
 
 While working with audio/video we usually do a set of tasks with the media.
+说到搞音视频通常是搞一堆媒体工作。（怎么翻？）
 
 ## Transcoding
 
 ![transcoding](/img/transcoding.png)
 
-**What?** the act of converting one of the streams (audio or video) from one CODEC to another one.
+**是什么？** 将流（音频、视频）从一种编码方式转为另一种。
 
-**Why?** sometimes some devices (TVs, smartphones, console and etc) doesn't support X but Y and newer CODECs provide better compression rate.
+**为什么？** 有时候有些设备（电视、智能手机、控制台等）不支持这种但支持另一种，且新编码器有更好压缩率。
 
-**How?** converting an `H264` (AVC) video to an `H265` (HEVC).
+**怎么做？** 将`H264` (AVC) 视频转为 `H265` (HEVC)。
 ```bash
 $ ffmpeg \
 -i bunny_1080p_60fps.mp4 \
@@ -156,11 +154,11 @@ bunny_1080p_60fps_h265.mp4
 
 ![transmuxing](/img/transmuxing.png)
 
-**What?** the act of converting from one format (container) to another one.
+**是什么？** 从一种格式转换为另一种。（换一种容器，流的编码方式未改变。）
 
-**Why?** sometimes some devices (TVs, smartphones, console and etc) doesn't support X but Y and sometimes newer containers provide modern required features.
+**为什么？** 有时候有些设备（电视、智能手机、控制台等）不支持这种但支持另一种，且有时新容器有更先进的特性。
 
-**How?** converting a `mp4` to a `webm`.
+**怎么做？** 将`mp4`转为`webm`.
 ```bash
 $ ffmpeg \
 -i bunny_1080p_60fps.mp4 \
@@ -172,11 +170,11 @@ bunny_1080p_60fps.webm
 
 ![transrating](/img/transrating.png)
 
-**What?** the act of changing the bit rate, or producing other renditions.
+**是什么？** 转换码率。
 
-**Why?** people will try to watch your video in a `2G` (edge) connection using a less powerful smartphone or in a `fiber` Internet connection on their 4K TVs therefore you should offer more than on rendition of the same video with different bit rate.
+**为什么？** 别人希望在`2G` (edge)网络下观看你的视频，更差的智能手机或用`光纤` 网络连接他们的4K电视，因此你需要提供多种不码率的视频。
 
-**How?** producing a rendition with bit rate between 3856K and 2000K.
+**怎么做？** 产生3856K及2000K.
 ```bash
 $ ffmpeg \
 -i bunny_1080p_60fps.mp4 \
@@ -184,17 +182,17 @@ $ ffmpeg \
 bunny_1080p_60fps_transrating_964_3856.mp4
 ```
 
-Usually we'll be using transrating with transsizing. Werner Robitza wrote another must read/execute [series of posts about FFmpeg rate control](http://slhck.info/posts/).
+一般我们常将变换码率和缩放尺寸一起使用。 Werner Robitza写了另一篇值得深读的文章[series of posts about FFmpeg rate control](http://slhck.info/posts/)。
 
 ## Transsizing
 
 ![transsizing](/img/transsizing.png)
 
-**What?** the act of converting from one resolution to another one. As said before transsizing is often used with transrating.
+**是什么** 从一另分辨率转换为另一种，如前述变换尺寸常常也会转换码率。
 
-**Why?** reasons are about the same as for the transrating.
+**为什么？** 原因同变换码率。
 
-**How?** converting a `1080p` to a `480p` resolution.
+**怎么做？** 将`1080p`转为`480p`。
 ```bash
 $ ffmpeg \
 -i bunny_1080p_60fps.mp4 \
@@ -206,11 +204,11 @@ bunny_1080p_60fps_transsizing_480.mp4
 
 ![adaptive streaming](/img/adaptive-streaming.png)
 
-**What?** the act of producing many resolutions (bit rates) and split the media into chunks and serve them via http.
+**是什么？** 用于生成多种分辨率（码率），将媒体分割成块通过http提供服务。
 
-**Why?** to provide a flexible media that can be watched on a low end smartphone or on a 4K TV, it's also easy to scale and deploy but it can add latency.
+**为什么？** 提供一种便于既可在低端智能手机又可以在4K电视上观看的视频，还可以通过图标简单的进行缩放。
 
-**How?** creating an adaptive WebM using DASH.
+**怎么做？** 通过DASH创建一个可伸缩的WebM。
 ```bash
 # video streams
 $ ffmpeg -i bunny_1080p_60fps.mp4 -c:v libvpx-vp9 -s 160x90 -b:v 250k -keyint_min 150 -g 150 -an -f webm -dash 1 video_160x90_250k.webm
@@ -240,11 +238,11 @@ $ ffmpeg \
  manifest.mpd
 ```
 
-PS: I stole this example from the [Instructions to playback Adaptive WebM using DASH](http://wiki.webmproject.org/adaptive-streaming/instructions-to-playback-adaptive-webm-using-dash)
+PS: 这个例子是我从[Instructions to playback Adaptive WebM using DASH](http://wiki.webmproject.org/adaptive-streaming/instructions-to-playback-adaptive-webm-using-dash) 偷来的。
 
 ## Going beyond
 
-There are [many and many other usages for FFmpeg](https://github.com/leandromoreira/digital_video_introduction/blob/master/encoding_pratical_examples.md#split-and-merge-smoothly).
+它们在 [many and many other usages for FFmpeg](https://github.com/leandromoreira/digital_video_introduction/blob/master/encoding_pratical_examples.md#split-and-merge-smoothly).
 I use it in conjunction with *iMovie* to produce/edit some videos for YouTube and you can certainly use it professionally.
 
 # Learn FFmpeg libav the Hard Way
