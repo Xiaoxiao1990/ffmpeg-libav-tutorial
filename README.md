@@ -3,7 +3,7 @@
 我在寻找如何开始使用[FFmpeg](https://www.ffmpeg.org/)库(即libav)相关的教程或书籍时看到了 ["How to write a video player in less than 1k lines"](http://dranger.com/ffmpeg/) 教程。
 非常不幸的是，它已经过时了，于是我决定写这篇文章。
 
-这里的大多数代码是用C写的，**莫慌**: 你可以很容易理解并方便地应用到你常用的语言中去。
+这里的大多数代码是用C写的，**莫慌**： 你可以很容易理解并方便地应用到你常用的语言中去。
 FFmpeg libav 有许多其他语言版本，如： [python](https://mikeboers.github.io/PyAV/), [go](https://github.com/imkira/go-libav) 即使没有你使用的语言，你仍然可以通过`ffi` (here's an example with [Lua](https://github.com/daurnimator/ffmpeg-lua-ffi/blob/master/init.lua))来支持。
 
 我们一开始将对视频、音频、编码器、容器等概念做一个快速的概览，然后快速地过一下如何使用 `FFmpeg` 命令行，最后开始写代码。也可以直接跳到[ ](http://newmediarockstars.com/wp-content/uploads/2015/11/nintendo-direct-iwata.jpg)[Learn FFmpeg libav the Hard Way.](#learn-ffmpeg-libav-the-hard-way)
@@ -330,33 +330,33 @@ for (int i = 0; i < pFormatContext->nb_streams; i++)
 }
 ```
 
-For each stream, we're going to keep the [`AVCodecParameters`](https://ffmpeg.org/doxygen/trunk/structAVCodecParameters.html), which describes the properties of a codec used by the stream `i`.
+对于每个流，我们需要保持[`AVCodecParameters`](https://ffmpeg.org/doxygen/trunk/structAVCodecParameters.html)，它描述了i流的编码器特性。
 
 ```c
 AVCodecParameters *pLocalCodecParameters = pFormatContext->streams[i]->codecpar;
 ```
 
-With the codec properties we can look up the proper CODEC querying the function [`avcodec_find_decoder`](https://ffmpeg.org/doxygen/trunk/group__lavc__decoding.html#ga19a0ca553277f019dd5b0fec6e1f9dca) and find the registered decoder for the codec id and return an [`AVCodec`](http://ffmpeg.org/doxygen/trunk/structAVCodec.html), the component that knows how to en**CO**de and **DEC**ode the stream.
+利用函数[`avcodec_find_decoder`](https://ffmpeg.org/doxygen/trunk/group__lavc__decoding.html#ga19a0ca553277f019dd5b0fec6e1f9dca)可以查看编码器特性，以及通过codec id返回[`AVCodec`](http://ffmpeg.org/doxygen/trunk/structAVCodec.html)从而找出编码器。 这个组件知道如何 en**CO**de and **DEC**ode流。
 ```c
 AVCodec *pLocalCodec = avcodec_find_decoder(pLocalCodecParameters->codec_id);
 ```
 
-Now we can print information about the codecs.
+现在我们可以打印编码器相关信息。
 
 ```c
-// specific for video and audio
+// 音视频规格
 if (pLocalCodecParameters->codec_type == AVMEDIA_TYPE_VIDEO) {
   printf("Video Codec: resolution %d x %d", pLocalCodecParameters->width, pLocalCodecParameters->height);
 } else if (pLocalCodecParameters->codec_type == AVMEDIA_TYPE_AUDIO) {
   printf("Audio Codec: %d channels, sample rate %d", pLocalCodecParameters->channels, pLocalCodecParameters->sample_rate);
 }
-// general
+// 一般信息
 printf("\tCodec %s ID %d bit_rate %lld", pLocalCodec->long_name, pLocalCodec->id, pCodecParameters->bit_rate);
 ```
 
-With the codec, we can allocate memory for the [`AVCodecContext`](https://ffmpeg.org/doxygen/trunk/structAVCodecContext.html), which will hold the context for our decode/encode process, but then we need to fill this codec context with CODEC parameters; we do that with [`avcodec_parameters_to_context`](https://ffmpeg.org/doxygen/trunk/group__lavc__core.html#gac7b282f51540ca7a99416a3ba6ee0d16).
+有了codec，我们可以分配内存给[`AVCodecContext`](https://ffmpeg.org/doxygen/trunk/structAVCodecContext.html)，它持有解码/编码过程上下文，但之后我们需要填入CODEC参数。我们在[`avcodec_parameters_to_context`](https://ffmpeg.org/doxygen/trunk/group__lavc__core.html#gac7b282f51540ca7a99416a3ba6ee0d16)中操作。
 
-Once we filled the codec context, we need to open the codec. We call the function [`avcodec_open2`](https://ffmpeg.org/doxygen/trunk/group__lavc__core.html#ga11f785a188d7d9df71621001465b0f1d) and then we can use it.
+一旦我们填充了codec context， 我们需要打开codec，调用[`avcodec_open2`](https://ffmpeg.org/doxygen/trunk/group__lavc__core.html#ga11f785a188d7d9df71621001465b0f1d)。
 
 ```c
 AVCodecContext *pCodecContext = avcodec_alloc_context3(pCodec);
@@ -364,14 +364,14 @@ avcodec_parameters_to_context(pCodecContext, pCodecParameters);
 avcodec_open2(pCodecContext, pCodec, NULL);
 ```
 
-Now we're going to read the packets from the stream and decode them into frames but first, we need to allocate memory for both components, the [`AVPacket`](https://ffmpeg.org/doxygen/trunk/structAVPacket.html) and [`AVFrame`](https://ffmpeg.org/doxygen/trunk/structAVFrame.html).
+然后我们从流中读入包并压缩到帧中，不过在此之前，需要分配内存给[`AVPacket`](https://ffmpeg.org/doxygen/trunk/structAVPacket.html) 和 [`AVFrame`](https://ffmpeg.org/doxygen/trunk/structAVFrame.html)。
 
 ```c
 AVPacket *pPacket = av_packet_alloc();
 AVFrame *pFrame = av_frame_alloc();
 ```
 
-Let's feed our packets from the streams with the function [`av_read_frame`](https://ffmpeg.org/doxygen/trunk/group__lavf__decoding.html#ga4fdb3084415a82e3810de6ee60e46a61) while it has packets.
+只要流中还有包就调用函数[`av_read_frame`](https://ffmpeg.org/doxygen/trunk/group__lavf__decoding.html#ga4fdb3084415a82e3810de6ee60e46a61) 从流中读入包。
 
 ```c
 while (av_read_frame(pFormatContext, pPacket) >= 0) {
@@ -379,19 +379,19 @@ while (av_read_frame(pFormatContext, pPacket) >= 0) {
 }
 ```
 
-Let's **send the raw data packet** (compressed frame) to the decoder, through the codec context, using the function [`avcodec_send_packet`](https://ffmpeg.org/doxygen/trunk/group__lavc__decoding.html#ga58bc4bf1e0ac59e27362597e467efff3).
+我们来**发送原始数据包** (压缩帧)给编码器，通过codec context, 使用函数 [`avcodec_send_packet`](https://ffmpeg.org/doxygen/trunk/group__lavc__decoding.html#ga58bc4bf1e0ac59e27362597e467efff3)。
 
 ```c
 avcodec_send_packet(pCodecContext, pPacket);
 ```
 
-And let's **receive the raw data frame** (uncompressed frame) from the decoder, through the same codec context, using the function [`avcodec_receive_frame`](https://ffmpeg.org/doxygen/trunk/group__lavc__decoding.html#ga11e6542c4e66d3028668788a1a74217c).
+然后我们再**接收原始数据帧** (未压缩的帧) 来自解码器，使用相同的codec context，函数[`avcodec_receive_frame`](https://ffmpeg.org/doxygen/trunk/group__lavc__decoding.html#ga11e6542c4e66d3028668788a1a74217c)。
 
 ```c
 avcodec_receive_frame(pCodecContext, pFrame);
 ```
 
-We can print the frame number, the [PTS](https://en.wikipedia.org/wiki/Presentation_timestamp), DTS, [frame type](https://en.wikipedia.org/wiki/Video_compression_picture_types) and etc.
+打印帧数，[PTS](https://en.wikipedia.org/wiki/Presentation_timestamp), DTS, [帧类型](https://en.wikipedia.org/wiki/Video_compression_picture_types)等等。
 
 ```c
 printf(
@@ -406,7 +406,7 @@ printf(
 );
 ```
 
-Finally we can save our decoded frame into a [simple gray image](https://en.wikipedia.org/wiki/Netpbm_format#PGM_example). The process is very simple, we'll use the `pFrame->data` where the index is related to the [planes Y, Cb and Cr](https://en.wikipedia.org/wiki/YCbCr), we just picked `0` (Y) to save our gray image.
+最后，我们将解码了的帧保存为[单灰度图像](https://en.wikipedia.org/wiki/Netpbm_format#PGM_example)。这个操作非常简单，我们使用`pFrame->data` 这里的索引关系是：[planes Y, Cb and Cr](https://en.wikipedia.org/wiki/YCbCr)，我们只要使用`0` (Y)来保存灰度图像。
 
 ```c
 save_gray_frame(pFrame->data[0], pFrame->linesize[0], pFrame->width, pFrame->height, frame_filename);
@@ -427,17 +427,17 @@ static void save_gray_frame(unsigned char *buf, int wrap, int xsize, int ysize, 
 }
 ```
 
-And voilà! Now we have a gray scale image with 2MB:
+And voilà!哇哦！ 现在我们有一个2MB的灰度图像了：
 
 ![saved frame](/img/generated_frame.png)
 
 ## Chapter 1 - syncing audio and video
 
-> **Be the player** - a young JS developer writing a new MSE video player.
+> **做一个播放器** - 一个年轻的JS开发人员写了一个新的MSE视频播放器。
 
-Before we move to [code a transcoding example](#chapter-2---transcoding) let's talk about **timing**, or how a video player knows the right time to play a frame.
+在我们步入[code a transcoding example](#chapter-2---transcoding)之前，我们来讨论一下**时序**，播放器如何知道在一个正确的时间播放帧。
 
-In the last example, we saved some frames that can be seen here:
+在最后的例子中，我们保存了一些帧，也就是：
 
 ![frame 0](/img/hello_world_frames/frame0.png)
 ![frame 1](/img/hello_world_frames/frame1.png)
@@ -446,26 +446,26 @@ In the last example, we saved some frames that can be seen here:
 ![frame 4](/img/hello_world_frames/frame4.png)
 ![frame 5](/img/hello_world_frames/frame5.png)
 
-When we're designing a video player we need to **play each frame at a given pace**, otherwise it would be hard to pleasantly see the video either because it's playing so fast or so slow.
+当我们在设计一个视频播放器的时候我们需要**在每一个节点播放一帧图像**，否则太快或太慢将会很难受。
 
-Therefore we need to introduce some logic to play each frame smoothly. For that matter, each frame has a **presentation timestamp** (PTS) which is an increasing number factored in a **timebase** that is a rational number (where the denominator is known as **timescale**) divisible by the **frame rate (fps)**.
+因此我们需要介绍一些逻辑使得播放每一帧都平滑。基于此，每个帧都有一个**展现时间戳** (PTS)， 它是一个递增的数字除以一个**时基** ，时基是一个比值 (它的分母**时间尺度**)除以**帧率(fps)**。这一段没看懂，请看原文。
 
-It's easier to understand when we look at some examples, let's simulate some scenarios.
+我们来看一些例子就很好理解了，我们来模拟一些场景：
 
-For a `fps=60/1` and `timebase=1/60000` each PTS will increase `timescale / fps = 1000` therefore the **PTS real time** for each frame could be (supposing it started at 0):
+例如一个`fps=60/1`，`timebase=1/60000`每个PTS都会累加`timescale / fps = 1000`，因此**PTS real time**对于每一帧来说(假设从0开始)：
 
 * `frame=0, PTS = 0, PTS_TIME = 0`
 * `frame=1, PTS = 1000, PTS_TIME = PTS * timebase = 0.016`
 * `frame=2, PTS = 2000, PTS_TIME = PTS * timebase = 0.033`
 
-For almost the same scenario but with a timebase equal to `1/60`.
+对于更多类似的场景，但是timebase等于`1/60`。
 
 * `frame=0, PTS = 0, PTS_TIME = 0`
 * `frame=1, PTS = 1, PTS_TIME = PTS * timebase = 0.016`
 * `frame=2, PTS = 2, PTS_TIME = PTS * timebase = 0.033`
 * `frame=3, PTS = 3, PTS_TIME = PTS * timebase = 0.050`
 
-For a `fps=25/1` and `timebase=1/75` each PTS will increase `timescale / fps = 3` and the PTS time could be:
+对于`fps=25/1`，`timebase=1/75`每个PTS将`timescale / fps = 3` and the PTS time could be:
 
 * `frame=0, PTS = 0, PTS_TIME = 0`
 * `frame=1, PTS = 3, PTS_TIME = PTS * timebase = 0.04`
@@ -476,13 +476,13 @@ For a `fps=25/1` and `timebase=1/75` each PTS will increase `timescale / fps = 3
 * ...
 * `frame=4064, PTS = 12192, PTS_TIME = PTS * timebase = 162.56`
 
-Now with the `pts_time` we can find a way to render this synched with audio `pts_time` or with a system clock. The FFmpeg libav provides these info through its API:
+现在有了`pts_time`我们就找到一个方法使用系统时钟来渲染和同步音频`pts_time`，FFmpeg libav通过API来提供这些信息：
 
 - fps = [`AVStream->avg_frame_rate`](https://ffmpeg.org/doxygen/trunk/structAVStream.html#a946e1e9b89eeeae4cab8a833b482c1ad)
 - tbr = [`AVStream->r_frame_rate`](https://ffmpeg.org/doxygen/trunk/structAVStream.html#ad63fb11cc1415e278e09ddc676e8a1ad)
 - tbn = [`AVStream->time_base`](https://ffmpeg.org/doxygen/trunk/structAVStream.html#a9db755451f14e2bf590d4b85d82b32e6)
 
-Just out of curiosity, the frames we saved were sent in a DTS order (frames: 1,6,4,2,3,5) but played at a PTS order (frames: 1,2,3,4,5). Also, notice how cheap are B-Frames in comparison to P or I-Frames.
+仅出于好奇，我们保存的帧是以DTS序列发送(帧序： 1,6,4,2,3,5)，但是播放是以PTS序列(帧序： 1,2,3,4,5)。另外，对比看看B-Frames和P及I-Frames有多小。
 
 ```
 LOG: AVStream->r_frame_rate 60/1
