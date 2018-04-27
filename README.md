@@ -250,83 +250,78 @@ I use it in conjunction with *iMovie* to produce/edit some videos for YouTube an
 > Don't you wonder sometimes 'bout sound and vision?
 > **David Robert Jones**
 
-Since the [FFmpeg](#ffmpeg---command-line) is so useful as a command line tool to do essential tasks over the media files, how can we use it in our programs?
+虽然[FFmpeg](#ffmpeg---command-line)是非常有用的处理媒体文件命令行工具，但是我们怎么在我们的程序中使用它呢？
 
-FFmpeg is [composed by several libraries](https://www.ffmpeg.org/doxygen/trunk/index.html) that can be integrated into our own programs.
-Usually, when you install FFmpeg, it installs automatically all these libraries. I'll be referring to the set of these libraries as **FFmpeg libav**.
+FFmpeg[由数个库组成](https://www.ffmpeg.org/doxygen/trunk/index.html) 可以被集成到我们程序中。一般在我们安装FFmpeg时也自动安装了它的所有库。也就是我前面也提到过的**FFmpeg libav**。
 
-> This title is a homage to Zed Shaw's series [Learn X the Hard Way](https://learncodethehardway.org/), particularly his book Learn C the Hard Way.
+> 这个标题意于Zed Shaw's [Learn X the Hard Way](https://learncodethehardway.org/)系列，特别是他的《Learn C the Hard Way》。
 
 ## Chapter 0 - The infamous hello world
-This hello world actually won't show the message `"hello world"` in the terminal :tongue:
-Instead we're going to **print out information about the video**, things like its format (container), duration, resolution, audio channels and, in the end, we'll **decode some frames and save them as image files**.
+这个“hello world”实际上是在终端展示`"hello world"`。 :tongue:我们将以**打印输出视频信息**，一些像格式（容器）、时长、分辨率、音频通道数等信息，然后在最后，我们会**编码一些帧并存储为图像文件**。
 
 ### FFmpeg libav architecture
 
-But before we start to code, let's learn how **FFmpeg libav architecture** works and how its components communicate with others.
+在我们写代码之前，先学习一下**FFmpeg libav架构**如何工作以及它的组件之间如何通信。
 
-Here's a diagram of the process of decoding a video:
+这是一个视频编码处理的框架图：
 
 ![ffmpeg libav architecture - decoding process](/img/decoding.png)
 
-You'll first need to load your media file into a component called [`AVFormatContext`](https://ffmpeg.org/doxygen/trunk/structAVFormatContext.html) (the video container is also known as format).
-It actually doesn't fully load the whole file: it often only reads the header.
+首先，你需要将你的媒体文件加载到一个叫做[`AVFormatContext`](https://ffmpeg.org/doxygen/trunk/structAVFormatContext.html) 组件中（视频容器也即格式）。它实际上并不是加载整体文件，一般仅读入文件头信息。
 
-Once we loaded the minimal **header of our container**, we can access its streams (think of them as a rudimentary audio and video data).
-Each stream will be available in a component called [`AVStream`](https://ffmpeg.org/doxygen/trunk/structAVStream.html).
+一但加载完了最少的**容器头部信息**，我们就可以访问到它所有的流（把它想像成原始的音频和视频数据）。每个流可以被用于叫做[`AVStream`](https://ffmpeg.org/doxygen/trunk/structAVStream.html)组件。
 
-> Stream is a fancy name for a continuous flow of data.
+> Stream is a fancy name for a continuous flow of data.（不是很认同，这句不翻。）
 
-Suppose our video has two streams: an audio encoded with [AAC CODEC](https://en.wikipedia.org/wiki/Advanced_Audio_Coding) and a video encoded with [H264 (AVC) CODEC](https://en.wikipedia.org/wiki/H.264/MPEG-4_AVC). From each stream we can extract **pieces (slices) of data** called packets that will be loaded into components named [`AVPacket`](https://ffmpeg.org/doxygen/trunk/structAVPacket.html).
+假设我们的视频（原文是video，这里应该叫文件吧，否则会有点歧义）有两个流：一个用[AAC CODEC](https://en.wikipedia.org/wiki/Advanced_Audio_Coding) 编码的音频流和一个用[H264 (AVC) CODEC](https://en.wikipedia.org/wiki/H.264/MPEG-4_AVC)编码的视频流。从每个流中，我们可以提取出**pieces (slices) of data（一片？一截？一块？原文更好理解）**叫做包，并载入到叫做[`AVPacket`](https://ffmpeg.org/doxygen/trunk/structAVPacket.html)的组件中。
 
-The **data inside the packets are still coded** (compressed) and in order to decode the packets, we need to pass them to a specific [`AVCodec`](https://ffmpeg.org/doxygen/trunk/structAVCodec.html).
+在上面**包中的数据仍然是被编码过的** (压缩) ，为了解压这些包，我们需要将其传入[`AVCodec`](https://ffmpeg.org/doxygen/trunk/structAVCodec.html)。
 
-The `AVCodec` will decode them into [`AVFrame`](https://ffmpeg.org/doxygen/trunk/structAVFrame.html) and finally, this component gives us **the uncompressed frame**.  Noticed that the same terminology/process is used either by audio and video stream.
+`AVCodec`会将它们解压到[`AVFrame`](https://ffmpeg.org/doxygen/trunk/structAVFrame.html)中，最终，这个组件会返回**未压缩的帧**。注意，音频和视频是同一套的处理过程。
 
 ### Chapter 0 - code walkthrough
 
 > #### TLDR; show me the [code](/0_hello_world.c) and execution.
 > ```bash
-> # WARNING: this file is around 300MB
+> # WARNING: 此文件大约 300MB
 > $ make
 > ```
 
-We'll skip some details, but don't worry: the [source code is available at github](/0_hello_world.c).
+我们会跳过一些信息，但别慌，完整代码在这里： [source code is available at github](/0_hello_world.c)。（Makefile有问题，我编译没通过过，只要把.c文件放到链接库前就行了，gcc-4.8，搞了很久，晕。）
 
-The first thing we need to do is to register all the codecs, formats and protocols.
-To do it, we just need to call the function [`av_register_all`](http://ffmpeg.org/doxygen/trunk/group__lavf__core.html#ga917265caec45ef5a0646356ed1a507e3):
+我们第一件需要做的事情就是注册所有编码器，格式和协议。我们只要调用函数[`av_register_all`](http://ffmpeg.org/doxygen/trunk/group__lavf__core.html#ga917265caec45ef5a0646356ed1a507e3)就行了：
 
 ```c
 av_register_all();
 ```
 
-Now we're going to allocate memory to the component [`AVFormatContext`](http://ffmpeg.org/doxygen/trunk/structAVFormatContext.html) that will hold  information about the format (container).
+接下来为组件[`AVFormatContext`](http://ffmpeg.org/doxygen/trunk/structAVFormatContext.html)分配内存，它持有关于格式（容器）的信息。
 
 ```c
 AVFormatContext *pFormatContext = avformat_alloc_context();
 ```
 
-Now we're going to open the file and read its header and fill the `AVFormatContext` with minimal information about the format (notice that usually the codecs are not opened).
-The function used to do this is [`avformat_open_input`](http://ffmpeg.org/doxygen/trunk/group__lavf__decoding.html#ga31d601155e9035d5b0e7efedc894ee49). It expects an `AVFormatContext`, a `filename` and two optional arguments: the [`AVInputFormat`](https://ffmpeg.org/doxygen/trunk/structAVInputFormat.html) (if you pass `NULL`, FFmpeg will guess the format) and the [`AVDictionary`](https://ffmpeg.org/doxygen/trunk/structAVDictionary.html) (which are the options to the demuxer).
+然后打开文件，读入头部信息（最少的格式相关信息）并填充到`AVFormatContext` (注意，一般这里还没有打开编码器)。
+函数[`avformat_open_input`](http://ffmpeg.org/doxygen/trunk/group__lavf__decoding.html#ga31d601155e9035d5b0e7efedc894ee49)用来完成这个操作。它需要一个`AVFormatContext`、一个`filename`以及两个可选参数：[`AVInputFormat`](https://ffmpeg.org/doxygen/trunk/structAVInputFormat.html) (若使用`NULL`，FFmpeg会猜测一个匹配格式)还有[`AVDictionary`](https://ffmpeg.org/doxygen/trunk/structAVDictionary.html) (这个是解复用选项)。
 
 ```c
 avformat_open_input(&pFormatContext, filename, NULL, NULL);
 ```
 
-We can print the format name and the media duration:
+打印格式名及媒体时长：
 
 ```c
 printf("Format %s, duration %lld us", pFormatContext->iformat->long_name, pFormatContext->duration);
 ```
 
-To access the `streams`, we need to read data from the media. The function [`avformat_find_stream_info`](https://ffmpeg.org/doxygen/trunk/group__lavf__decoding.html#gad42172e27cddafb81096939783b157bb) does that.
-Now, the `pFormatContext->nb_streams` will hold the amount of streams and the `pFormatContext->streams[i]` will give us the `i` stream (an [`AVStream`](https://ffmpeg.org/doxygen/trunk/structAVStream.html)).
+我们需要从媒体中读入数据来使用`streams`，函数[`avformat_find_stream_info`](https://ffmpeg.org/doxygen/trunk/group__lavf__decoding.html#gad42172e27cddafb81096939783b157bb)实现这个操作。
+现在，`pFormatContext->nb_streams`为流总数，而`pFormatContext->streams[i]`是第`i`个流(一个[`AVStream`](https://ffmpeg.org/doxygen/trunk/structAVStream.html))。
 
 ```c
 avformat_find_stream_info(pFormatContext,  NULL);
 ```
 
-Now we'll loop through all the streams.
+遍历所有流。
 
 ```c
 for (int i = 0; i < pFormatContext->nb_streams; i++)
