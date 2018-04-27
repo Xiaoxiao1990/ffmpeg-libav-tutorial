@@ -1,14 +1,14 @@
 [![license](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)
 
-I was looking for a tutorial/book that would teach me how to start to use [FFmpeg](https://www.ffmpeg.org/) as a library (a.k.a. libav) and then I found the ["How to write a video player in less than 1k lines"](http://dranger.com/ffmpeg/) tutorial.
-Unfortunately it was deprecated, so I decided to write this one.
+我在寻找如何开始使用[FFmpeg](https://www.ffmpeg.org/)库(即libav)相关的教程或书籍时看到了 ["How to write a video player in less than 1k lines"](http://dranger.com/ffmpeg/) 教程。
+非常不幸的是，它已经过时了，于是我决定写这篇文章。
 
-Most of the code in here will be in c **but don't worry**: you can easily understand and apply it to your preferred language.
-FFmpeg libav has lots of bindings for many languages like [python](https://mikeboers.github.io/PyAV/), [go](https://github.com/imkira/go-libav) and even if your language doesn't have it, you can still support it through the `ffi` (here's an example with [Lua](https://github.com/daurnimator/ffmpeg-lua-ffi/blob/master/init.lua)).
+这里的大多数代码是用C写的，**但别担心**: 你可以简单方便地理解并应用到你常用的语言中去。
+FFmpeg libav 有许多其他语言版本，如： [python](https://mikeboers.github.io/PyAV/), [go](https://github.com/imkira/go-libav) 即使没有你使用的语言，你仍然可以通过`ffi` (here's an example with [Lua](https://github.com/daurnimator/ffmpeg-lua-ffi/blob/master/init.lua))来支持。
 
-We'll start with a quick lesson about what is video, audio, codec and container and then we'll go to a crash course on how to use `FFmpeg` command line and finally we'll write code, feel free to skip directly to[ ](http://newmediarockstars.com/wp-content/uploads/2015/11/nintendo-direct-iwata.jpg)the section [Learn FFmpeg libav the Hard Way.](#learn-ffmpeg-libav-the-hard-way)
+我们一开始将对视频、音频、编码器、容器等概念做一个快速的概览，然后快速地过一下如何使用 `FFmpeg` 命令行，最后开始写代码。也可以直接跳到[ ](http://newmediarockstars.com/wp-content/uploads/2015/11/nintendo-direct-iwata.jpg)[Learn FFmpeg libav the Hard Way.](#learn-ffmpeg-libav-the-hard-way)
 
-Some people used to say that the Internet video streaming is the future of the traditional TV, in any case, the FFmpeg is something that is worth studying.
+人们常说网络视频流是传统TV的未来，因此FFmpeg是值得去学习的。
 
 __Table of Contents__
 
@@ -35,8 +35,8 @@ __Table of Contents__
 
 ## video - what you see!
 
-If you have a sequence series of images and change them at a given frequency (let's say [24 images per second](https://www.filmindependent.org/blog/hacking-film-24-frames-per-second/)), you will create an [illusion of movement](https://en.wikipedia.org/wiki/Persistence_of_vision).
-In summary this is the very basic idea behind a video: **a series of pictures / frames running at a given rate**.
+如果你有一系列有序的图片，然后按给定的频率改变(假定 [24 张图片每秒](https://www.filmindependent.org/blog/hacking-film-24-frames-per-second/))，你就可以创建一个 [动画](https://en.wikipedia.org/wiki/Persistence_of_vision).
+总而言之，这是视频背后最基本的原理： **一系列图片 / 以给定速率播放这些帧**.
 
 <img src="https://upload.wikimedia.org/wikipedia/commons/1/1f/Linnet_kineograph_1886.jpg" title="flip book" height="280"></img>
 
